@@ -1,4 +1,4 @@
-# Grafo Líquido
+# liquid-graph
 
 **A semantic garbage collector for Obsidian vaults.**
 
