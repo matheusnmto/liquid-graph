@@ -1,0 +1,10 @@
+# Zelador
+zelador/node_modules/
+zelador/.env
+
+# Obsidian
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# macOS
+.DS_Store
