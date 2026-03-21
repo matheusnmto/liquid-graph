@@ -1,35 +1,30 @@
 'use strict';
 
-// Carrega variáveis de ambiente do .env (necessário apenas para Etapa 4)
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const path = require('path');
+const fs = require('fs');
 const { acquireLock, registerExitHandlers } = require('./modules/lockFile');
 const { scanVault, getRelativePath, getNoteTitle } = require('./modules/scanner');
 const { readFrontmatter, isDecayImmune, getDecayLevel } = require('./modules/frontmatter');
-const { determinePhase, applyPhase1 } = require('./modules/phases');
-const { DEFAULTS, DECAY_CONFIG_FILE } = require('./config/defaults');
+const { determinePhase, applyPhase1, applyPhase2, applyPhase3, updateState } = require('./modules/phases');
+const { generatePurgatory } = require('./modules/purgatory');
+const { DEFAULTS, DECAY_CONFIG_FILE, ZELADOR_DIR } = require('./config/defaults');
 
-// ─────────────────────────────────────────────────
-// Caminho do vault: diretório pai do zelador/
-// zelador/ fica dentro do vault, então o vault é um nível acima
-// ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Configuração de paths
+// zelador/ fica dentro do vault — o vault é um nível acima
+// ─────────────────────────────────────────────────────────────────────────────
 const VAULT_PATH = path.resolve(__dirname, '..');
 
-// ─────────────────────────────────────────────────
-// Logger com timestamp ISO
-// ─────────────────────────────────────────────────
 function log(msg) {
   console.log(`[${new Date().toISOString()}] ${msg}`);
 }
 
-// ─────────────────────────────────────────────────
-// Carrega configuração por pasta (decay.config.json)
-// Implementação completa vem na Etapa 2
-// Por ora, retorna apenas os defaults globais
-// ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// loadConfig — Lê decay.config.json, com fallback para defaults globais
+// ─────────────────────────────────────────────────────────────────────────────
 function loadConfig() {
-  const fs = require('fs');
   const configPath = path.join(VAULT_PATH, DECAY_CONFIG_FILE);
 
   if (!fs.existsSync(configPath)) {
@@ -38,29 +33,25 @@ function loadConfig() {
 
   try {
     const raw = fs.readFileSync(configPath, 'utf8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // Garante que global sempre existe com todos os campos
+    parsed.global = { ...DEFAULTS, ...(parsed.global || {}) };
+    return parsed;
   } catch (err) {
     log(`⚠️  Erro ao ler decay.config.json: ${err.message}. Usando defaults.`);
     return { global: DEFAULTS, folders: {} };
   }
 }
 
-/**
- * Resolve a configuração efetiva para um arquivo,
- * percorrendo a hierarquia de pastas do mais específico ao mais geral.
- *
- * Exemplo: /fleeting/ideias/nota.md
- *   1. verifica config de /fleeting/ideias
- *   2. verifica config de /fleeting
- *   3. usa global
- *
- * @param {string} relativePath - ex: "/fleeting/ideias/nota.md"
- * @param {object} config - objeto completo do decay.config.json
- * @returns {object} config efetiva com phase1_days, phase2_days, phase3_days
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// resolveConfig — Determina a config efetiva percorrendo a hierarquia de pastas
+//
+// Exemplo: /fleeting/ideias/nota.md
+//   verifica: /fleeting/ideias → /fleeting → global
+//   usa a primeira regra encontrada
+// ─────────────────────────────────────────────────────────────────────────────
 function resolveConfig(relativePath, config) {
-  // Monta todos os prefixos de pasta em ordem do mais específico ao mais geral
-  const segments = relativePath.split('/').slice(0, -1); // remove o nome do arquivo
+  const segments = relativePath.split('/').slice(0, -1);
   const prefixes = [];
 
   for (let i = segments.length; i > 0; i--) {
@@ -70,11 +61,9 @@ function resolveConfig(relativePath, config) {
   for (const prefix of prefixes) {
     const folderConfig = config.folders && config.folders[prefix];
     if (folderConfig) {
-      // decay_immune: true na pasta = tratar como imune
       if (folderConfig.decay_immune === true) {
         return { ...config.global, decay_immune: true };
       }
-      // Mescla: config da pasta sobrescreve o global
       return { ...config.global, ...folderConfig };
     }
   }
@@ -82,60 +71,76 @@ function resolveConfig(relativePath, config) {
   return { ...config.global };
 }
 
-// ─────────────────────────────────────────────────
-// MAIN — Ponto de entrada
-// ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// ensureZeladorDir — Cria /.zelador/ se não existe
+// ─────────────────────────────────────────────────────────────────────────────
+function ensureZeladorDir() {
+  const dir = path.join(VAULT_PATH, ZELADOR_DIR);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN
+// ─────────────────────────────────────────────────────────────────────────────
 async function main() {
   log('🌊 Zelador iniciando...');
   log(`📁 Vault: ${VAULT_PATH}`);
 
-  // 1. Registra handlers de saída e adquire lock
   registerExitHandlers();
   acquireLock();
+  ensureZeladorDir();
 
-  // 2. Carrega configuração
+  // ── Carrega configuração ──
   const config = loadConfig();
-  log(`⚙️  Configuração carregada. Pastas configuradas: ${Object.keys(config.folders || {}).length}`);
+  log(`⚙️  Configuração: ${Object.keys(config.folders || {}).length} pasta(s) configurada(s).`);
 
-  // 3. Varre o vault
+  // ── Varre o vault ──
   log('🔍 Varrendo vault...');
   const files = await scanVault(VAULT_PATH);
-  log(`📝 ${files.length} arquivo(s) .md encontrado(s) para avaliação.`);
+  log(`📝 ${files.length} arquivo(s) avaliado(s).`);
 
   // Contadores para o relatório final
-  const stats = { phase1: 0, skipped_immune: 0, skipped_already: 0, skipped_below_threshold: 0 };
+  const stats = {
+    phase1: 0,
+    phase2: 0,
+    phase3: 0,
+    skipped_immune: 0,
+    skipped_already: 0,
+    skipped_below_threshold: 0,
+    errors: 0,
+  };
 
-  // 4. Processa cada arquivo
+  // ── Processa cada arquivo ──
   for (const { filePath, inactivityMs } of files) {
     const relativePath = getRelativePath(VAULT_PATH, filePath);
     const noteTitle = getNoteTitle(filePath);
 
-    // Lê frontmatter
     let frontmatterData;
     try {
-      const parsed = readFrontmatter(filePath);
-      frontmatterData = parsed.data;
+      frontmatterData = readFrontmatter(filePath).data;
     } catch (err) {
       log(`⚠️  Erro ao ler frontmatter de ${relativePath}: ${err.message}`);
+      stats.errors++;
       continue;
     }
 
-    // ── Verificação de imunidade (ANTES do mtime) ──
+    // ── Imunidade por frontmatter (ANTES do mtime) ──
     if (isDecayImmune(frontmatterData)) {
       stats.skipped_immune++;
       continue;
     }
 
-    // ── Resolve config efetiva para esta pasta ──
+    // ── Resolve config da pasta ──
     const effectiveConfig = resolveConfig(relativePath, config);
 
-    // ── Imunidade por pasta no decay.config.json ──
+    // ── Imunidade por pasta ──
     if (effectiveConfig.decay_immune === true) {
       stats.skipped_immune++;
       continue;
     }
 
-    // ── Determina qual fase aplicar ──
     const phase = determinePhase(inactivityMs, effectiveConfig);
 
     if (phase === null) {
@@ -145,41 +150,68 @@ async function main() {
 
     const currentLevel = getDecayLevel(frontmatterData);
 
-    // ── Aplica a fase correspondente ──
     try {
+      // ── FASE 1 ──
       if (phase === 1) {
         const applied = applyPhase1(filePath, frontmatterData);
         if (applied) stats.phase1++;
         else stats.skipped_already++;
+
+      // ── FASE 2 ──
       } else if (phase === 2) {
-        if (currentLevel < 2) {
-          // F2 ainda não implementada — loga e pula
-          log(`⏳ [F2 pendente] ${noteTitle} — Etapa 3 necessária`);
-        } else {
+        if (currentLevel >= 2) {
           stats.skipped_already++;
+          continue;
         }
+        const result = await applyPhase2(filePath, VAULT_PATH, frontmatterData);
+        if (result.success) {
+          stats.phase2++;
+          log(`🔗 [F2] ${noteTitle}: ${result.filesModified} arquivo(s), ${result.linksRemoved} link(s) removido(s)`);
+        } else if (result.error !== 'already_processed') {
+          stats.errors++;
+          log(`❌ [F2] ${noteTitle}: ${result.error}`);
+        }
+
+      // ── FASE 3 ──
       } else if (phase === 3) {
-        if (currentLevel < 3) {
-          // F3 ainda não implementada — loga e pula
-          log(`⏳ [F3 pendente] ${noteTitle} — Etapa 4 necessária`);
-        } else {
+        if (currentLevel >= 3) {
           stats.skipped_already++;
+          continue;
         }
+        // F3 registrada como pendente — será implementada na Etapa 4
+        log(`⏳ [F3 pendente] ${noteTitle} — Etapa 4 necessária`);
       }
+
     } catch (err) {
       log(`❌ Erro ao processar ${relativePath}: ${err.message}`);
+      stats.errors++;
     }
   }
 
-  // 5. Relatório final
+  // ── Gera PURGATORIO.md ──
+  log('📋 Atualizando PURGATORIO.md...');
+  try {
+    const { items } = await generatePurgatory(VAULT_PATH, config, resolveConfig);
+    log(`🔥 Purgatório: ${items} nota(s) listada(s).`);
+  } catch (err) {
+    log(`⚠️  Erro ao gerar PURGATORIO.md: ${err.message}`);
+  }
+
+  // ── Atualiza state.json ──
+  updateState(VAULT_PATH, { lastRun: new Date().toISOString() });
+
+  // ── Relatório final ──
   log('');
-  log('─────────────────────────────────');
+  log('─────────────────────────────────────');
   log('📊 RELATÓRIO DE EXECUÇÃO');
-  log(`   ✅ Fase 1 aplicada:       ${stats.phase1}`);
-  log(`   🛡️  Imunes (puladas):      ${stats.skipped_immune}`);
-  log(`   ↩️  Já processadas:        ${stats.skipped_already}`);
-  log(`   💤 Abaixo do threshold:   ${stats.skipped_below_threshold}`);
-  log('─────────────────────────────────');
+  log(`   🌵 Fase 1 (Estiagem):       ${stats.phase1}`);
+  log(`   🔗 Fase 2 (Desconexão):     ${stats.phase2}`);
+  log(`   💀 Fase 3 (Dissolução):     ${stats.phase3}`);
+  log(`   🛡️  Imunes (puladas):        ${stats.skipped_immune}`);
+  log(`   ↩️  Já processadas:          ${stats.skipped_already}`);
+  log(`   💤 Abaixo do threshold:     ${stats.skipped_below_threshold}`);
+  log(`   ❌ Erros:                   ${stats.errors}`);
+  log('─────────────────────────────────────');
   log('✅ Zelador finalizado.');
 }
 
