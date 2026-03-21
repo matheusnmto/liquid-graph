@@ -1,190 +1,288 @@
 # Grafo Líquido
 
-> Semantic garbage collector para vaults do Obsidian — notas que param de ser usadas decaem, se desconectam e são comprimidas por IA.
+**A semantic garbage collector for Obsidian vaults.**
 
-[![Build & Release](https://github.com/matheusnmto/liquid-graph/actions/workflows/release.yml/badge.svg)](https://github.com/matheusnmto/liquid-graph/actions/workflows/release.yml)
+Grafo Líquido is a local desktop daemon that applies programmed entropy to Markdown files based on inactivity. Notes that are not revisited or connected progressively lose visibility in the graph, get disconnected from the knowledge network, and are eventually compressed by AI into a single archival sentence — while the original is always preserved.
 
----
-
-## O que faz
-
-O Grafo Líquido é um**daemon de manutenção semântica** para vaults do [Obsidian](https://obsidian.md). Ele identifica notas que pararam de ser consultadas e aplica um ciclo de decaimento em 3 fases:
-
-| Fase | Nome | Trigger | Efeito |
-|------|------|---------|--------|
-| F1 | Estiagem | Nota inativa por ≥30 dias | Marca `decay_level: 1` no frontmatter |
-| F2 | Desconexão | Inativa por ≥60 dias | Snapshot Git + quebra de wikilinks em todo o vault |
-| F3 | Dissolução | Inativa por ≥90 dias | IA comprime a nota em uma frase, fossiliza o original em `/_fossilized/` |
-
-**Ressurreição:** basta abrir a nota ou criar um novo `[[wikilink]]` apontando para ela — o decaimento é resetado automaticamente.
+The system runs silently in the background, executing once per day during off-hours. No cloud sync. No subscriptions. No data ever leaves your machine except for the AI compression call you explicitly configure.
 
 ---
 
-## Instalação
+## The Problem
 
-### Desktop (Electron)
+Knowledge management tools are optimized for capture, not for forgetting. Over time, a vault accumulates hundreds of notes that are never revisited — half-formed ideas, outdated meeting notes, obsolete drafts. They consume cognitive space in the graph without contributing meaning. There is no native mechanism in Obsidian to let knowledge decay naturally.
 
-Baixe o instalador para seu sistema em [Releases](https://github.com/matheusnmto/liquid-graph/releases):
+Grafo Líquido is that mechanism.
 
--**macOS:** `.dmg`
--**Windows:** `.exe` (NSIS)
--**Linux:** `.AppImage`
+---
 
-### Linha de comando
+## How It Works
+
+The system evaluates each note's vitality based on the time elapsed since its last modification (`mtime`). Decay happens in three sequential phases:
+
+### Phase 1 — Drought (inactivity > 30 days)
+
+The note is flagged as inactive. No content is modified. The system injects `decay_level: 1` into the YAML frontmatter. In Obsidian, the graph node loses its primary color and turns gray through pre-configured graph filters.
+
+### Phase 2 — Disconnection (inactivity > 60 days)
+
+Before any modification, the system creates a mandatory Git snapshot of the entire vault. Then it scans every `.md` file in the vault, finds all references to the decaying note, and replaces `[[Note Name]]` wikilink syntax with plain text. The note loses all its edges in the graph, becoming an isolated node — an island disconnected from the main knowledge network.
+
+### Phase 3 — Dissolution (inactivity > 90 days)
+
+The note's content is sent to an AI provider (Google Gemini or Anthropic Claude) for lossy compression. The original file is moved to `/_fossilized/YYYY-MM/` and a lightweight note is created in its place containing a one-sentence summary and a recovery link. The original is never deleted.
+
+**Resurrection:** linking to a decaying note from any other note resets its `decay_level` to zero on the next execution cycle.
+
+---
+
+## Architecture
+
+Grafo Líquido is a single local component — a Node.js daemon packaged as an Electron desktop application. There is no external server, no n8n orchestrator, no cloud dependency. The AI API call in Phase 3 goes directly from your machine to Google or Anthropic.
+
+```
+liquid-graph/
+├── electron/
+│   ├── main.js            — BrowserWindow, system tray, scheduler
+│   ├── preload.js         — Secure contextBridge for IPC
+│   ├── tray.js            — System tray icon and context menu
+│   └── ipc/
+│       ├── config.ipc.js  — Settings management and keytar
+│       └── zelador.ipc.js — Zelador process execution
+├── renderer/
+│   ├── index.html
+│   ├── app.js             — Dashboard, Purgatory, Fossilized, Graph tabs
+│   ├── graph.js           — D3.js force simulation
+│   └── styles.css
+├── zelador/
+│   ├── zelador.js         — Main entry point and orchestration loop
+│   ├── config/
+│   │   └── defaults.js    — Default thresholds and constants
+│   └── modules/
+│       ├── scanner.js     — Vault traversal and mtime reading
+│       ├── frontmatter.js — YAML read/write via gray-matter
+│       ├── phases.js      — Phase 1, 2, and 3 logic
+│       ├── git.js         — Automated Git snapshots
+│       ├── linkBreaker.js — Wikilink removal (6 syntax variants)
+│       ├── aiProvider.js  — Multi-provider AI abstraction (BYOK)
+│       ├── fossilizer.js  — File archival and fossil note creation
+│       ├── purgatory.js   — PURGATORIO.md generation
+│       └── lockFile.js    — Prevents concurrent executions
+├── assets/
+├── electron-builder.yml
+└── .github/workflows/
+    └── release.yml        — Cross-platform build and release CI
+```
+
+---
+
+## Installation
+
+### Desktop Application
+
+Download the installer for your operating system from [Releases](https://github.com/matheusnmto/liquid-graph/releases):
+
+| Platform | File |
+|----------|------|
+| macOS | `.dmg` |
+| Windows | `.exe` (NSIS installer) |
+| Linux | `.AppImage` |
+
+No runtime dependencies required. Node.js is bundled inside the application.
+
+### From Source
 
 ```bash
 git clone https://github.com/matheusnmto/liquid-graph.git
 cd liquid-graph
 npm install
-cd zelador && npm install && cd..
-
-# Executar o Zelador diretamente
-npm run zelador
-
-# Abrir o app Electron
+cd zelador && npm install && cd ..
 npm start
 ```
 
 ---
 
-## Modelo de API de IA
+## Configuration
 
-O Grafo Líquido usa inteligência artificial na**Fase 3 (Dissolução)** para comprimir notas em uma frase-resumo. Existem dois modelos de acesso:
+### Vault Setup
 
-### � Modalidade 1 — BYOK (Bring Your Own Key)*[implementada]*
+On first launch, the application will prompt for the absolute path to your Obsidian vault. This is the only required configuration step.
 
-O usuário fornece sua própria chave de API. A chave é armazenada**exclusivamente no keychain do sistema operacional** (via [keytar](https://github.com/nicholasrq/node-keytar)) — nunca em disco, nunca em logs, nunca em texto plano.
+### Decay Thresholds
 
-| Provider | Modelo | Custo estimado por nota |
-|----------|--------|------------------------|
-| [Anthropic](https://console.anthropic.com) | claude-haiku-4-5-20251001 | ~$0.001 |
-| [Google AI](https://aistudio.google.com) | gemini-1.5-flash | ~$0.0003 |
-
->**� Nota de privacidade:** Na modalidade BYOK, o conteúdo das suas notas vai**diretamente do seu computador para a API** da Anthropic ou Google. Nenhum servidor do Grafo Líquido recebe, processa ou armazena suas notas. Zero intermediários.
-
-### Modalidade 2 — Chave Centralizada / SaaS*[roadmap]*
-
-Modelo futuro onde o usuário não precisa ter uma API key. O Grafo Líquido fornece o acesso à IA via conta + assinatura.
-
-**Implicações:**
-- Requer backend (Node.js + banco de dados para contas/billing)
-- O conteúdo das notas trafegará para um servidor externo — consentimento explícito será obrigatório
-- Vantagem: zero configuração para o usuário final
-- Stack planejada: [Stripe](https://stripe.com) para billing, deploy na [Railway](https://railway.app)
-
-> Este modelo**ainda não foi implementado**. Se tiver interesse em contribuir, veja a seção [Contribuindo](#contribuindo) abaixo.
-
----
-
-## Estrutura do projeto
-
-```
-liquid-graph/
-├── electron/              ← Main Process do Electron
-│   ├── main.js            ← Janela, tray, agendamento
-│   ├── preload.js         ← Bridge segura (contextBridge)
-│   ├── tray.js            ← System tray com menu contextual
-│   └── ipc/
-│       ├── config.ipc.js  ← Configurações + keytar
-│       └── zelador.ipc.js ← Execução do Zelador via fork()
-├── renderer/              ← Interface do app
-│   ├── index.html
-│   ├── app.js
-│   └── styles.css
-├── zelador/               ← Lógica core (Node.js puro)
-│   ├── zelador.js         ← Entry point
-│   ├── config/defaults.js ← Thresholds padrão
-│   └── modules/
-│       ├── scanner.js     ← Varredura do vault
-│       ├── frontmatter.js ← Leitura/escrita via gray-matter
-│       ├── phases.js      ← Lógica de F1/F2/F3
-│       ├── git.js         ← Snapshots Git automatizados
-│       ├── linkBreaker.js ← Quebra de wikilinks (6 variantes)
-│       ├── aiProvider.js  ← Abstração multi-provider (BYOK)
-│       ├── purgatory.js   ← Geração do PURGATORIO.md
-│       └── lockFile.js    ← Previne execuções concorrentes
-├── assets/                ← Ícones do app
-├── electron-builder.yml   ← Config de empacotamento
-└──.github/workflows/     ← CI/CD para releases
-```
-
----
-
-## Configuração
-
-### `decay.config.json` (na raiz do vault)
+Place a `decay.config.json` file at the root of your vault to override default thresholds per folder:
 
 ```json
 {
+  "global": {
+    "phase1_days": 30,
+    "phase2_days": 60,
+    "phase3_days": 90
+  },
   "folders": {
     "evergreen": {
       "decay_immune": true
     },
     "fleeting": {
-      "days_phase1": 14,
-      "days_phase2": 28,
-      "days_phase3": 45
+      "phase1_days": 7,
+      "phase2_days": 14,
+      "phase3_days": 21
+    },
+    "journal": {
+      "skip_phases": [1, 2],
+      "phase3_days": 14
     }
   }
 }
 ```
 
-### `.env` (na pasta `zelador/`)
+The most specific folder rule takes precedence over global defaults. Setting `decay_immune: true` on a folder exempts all notes inside it from all phases.
 
-```env
-ANTHROPIC_API_KEY=sk-ant-...
-GOOGLE_AI_API_KEY=AIza...
+### Note-Level Immunity
+
+Add `decay_immune: true` to any note's frontmatter to permanently exempt it from the decay cycle:
+
+```yaml
+---
+decay_immune: true
+tags: [person, reference]
+---
 ```
 
-> No app Electron, as chaves são gerenciadas pela interface e armazenadas no keychain — o `.env` é necessário apenas para uso via CLI.
+Use this for permanent references, people notes, active project documents, or any note that should never decay.
+
+### Obsidian Graph Colors
+
+To visualize decay state in Obsidian's graph view, add the following `colorGroups` to `.obsidian/graph.json`:
+
+```json
+"colorGroups": [
+  { "query": "[decay_level:1]", "color": { "a": 1, "rgb": 8947584 } },
+  { "query": "[decay_level:2]", "color": { "a": 1, "rgb": 12217111 } },
+  { "query": "[decay_level:3]", "color": { "a": 1, "rgb": 10041373 } },
+  { "query": "[status:fossilized]", "color": { "a": 0.4, "rgb": 4473921 } }
+]
+```
 
 ---
 
-## Contribuindo
+## AI Integration
 
-### Rodando localmente
+Phase 3 compression requires an AI API key. Grafo Líquido supports two providers:
+
+| Provider | Model | Estimated cost per note |
+|----------|-------|------------------------|
+| Google AI | gemini-2.0-flash | ~$0.0003 |
+| Anthropic | claude-haiku-4-5-20251001 | ~$0.001 |
+
+API keys are entered through the application's Settings screen and stored exclusively in the operating system keychain via [keytar](https://github.com/atom/node-keytar). Keys are never written to disk, never logged, and never transmitted to any server other than the provider's official API endpoint.
+
+**Privacy note:** In BYOK mode, note content travels directly from your machine to the AI provider's API. No Grafo Líquido server receives, processes, or stores your notes at any point.
+
+For CLI usage only, keys can also be set via environment variables in `zelador/.env`:
+
+```
+AI_PROVIDER=google
+GOOGLE_AI_API_KEY=AIza...
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+---
+
+## Safety and Reversibility
+
+Data safety is the primary design constraint of the system. Two independent protection layers are in place before any destructive operation:
+
+**Layer 1 — Git snapshot.** Before Phase 2 or Phase 3 executes on any note, the system runs `git add -A && git commit` with a standardized message. This is mandatory and cannot be disabled through configuration. If the commit fails, the operation aborts entirely.
+
+```
+zelador: snapshot pre-F2 2026-03-21 "Note Name"
+zelador: snapshot pre-F3 2026-03-21 "Note Name"
+```
+
+**Layer 2 — Fossilized archive.** In Phase 3, the original note is moved — never deleted — to `/_fossilized/YYYY-MM/`. It is recoverable through Obsidian's file explorer with a single click, without requiring Git or terminal access.
+
+**Concurrency protection.** The daemon creates a lock file at `/tmp/zelador.lock` on startup and cleans it on exit. If a previous process died unexpectedly, the lock is validated against the process table before aborting.
+
+---
+
+## Frontmatter Reference
+
+All keys below are written and managed automatically by the Zelador. The only key intended for manual use is `decay_immune`.
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `decay_level` | integer | Current phase: 0 (active), 1, 2, or 3 (fossilized) |
+| `decay_immune` | boolean | If true, the note is ignored in all phases |
+| `decay_since` | date | ISO date when decay began |
+| `links_removed_at` | date | ISO date when wikilinks were removed (Phase 2) |
+| `fossilized_at` | date | ISO date when Phase 3 executed |
+| `original_path` | string | Path to the original in `/_fossilized/` |
+| `status` | string | Set to `fossilized` after Phase 3 |
+
+---
+
+## Scheduled Execution
+
+The application runs the Zelador automatically at 03:00 AM daily. The schedule is configurable through the Settings screen. The process runs in the background via system tray — the main window can be closed without stopping execution.
+
+For system-level scheduling outside the Electron app:
 
 ```bash
-# 1. Clone o repositório
+# cron — add via crontab -e
+0 3 * * * cd /path/to/liquid-graph && node zelador/zelador.js >> /var/log/zelador.log 2>&1
+```
+
+---
+
+## The PURGATORIO.md File
+
+On every execution, the Zelador generates or updates `PURGATORIO.md` at the root of the vault. This file lists all notes scheduled for Phase 3 within the next 30 days, sorted by urgency. It is visible directly in Obsidian — no external notification or email required.
+
+Opening any note listed in the Purgatório resets its decay cycle automatically.
+
+The file itself carries `decay_immune: true` and is never processed by the system.
+
+---
+
+## Contributing
+
+```bash
 git clone https://github.com/matheusnmto/liquid-graph.git
 cd liquid-graph
-
-# 2. Instale as dependências
 npm install
-cd zelador && npm install && cd..
-
-# 3. Rode em modo desenvolvimento
+cd zelador && npm install && cd ..
 npm start
 ```
 
-### Como contribuir
+To simulate note inactivity for testing:
 
-1.**Abra uma issue** descrevendo o bug ou feature request
-2.**Fork** o repositório
-3. Crie uma**branch** descritiva: `git checkout -b feat/resurrection-module`
-4. Faça suas alterações e**commite** com mensagens claras
-5. Abra um**Pull Request** apontando para `main`
+```bash
+# Set mtime to 35 days ago (triggers Phase 1)
+touch -t $(date -v-35d +%Y%m%d%H%M) vault/notes/test-note.md
 
-### Convenções
+# Set mtime to 95 days ago (triggers Phase 3)
+touch -t 202312010000 vault/notes/test-note.md
+```
 
--**Commits:** mensagens em inglês, formato `tipo: descrição` (ex: `feat: add resurrection module`)
--**Código:** `'use strict'` em todos os módulos, JSDoc nas funções públicas
--**Testes:** crie notas de teste com `touch -t` para simular inatividade
--**Segurança:** chaves de API**nunca** devem aparecer em logs ou commits
+**Commit conventions:** messages in English, format `type: description`  
+Examples: `feat: add resurrection module`, `fix: regex escaping for special chars`
+
+**Security:** API keys must never appear in logs, commits, or error messages — not even partially.
+
+Pull requests are welcome. Open an issue first for any change that affects the decay logic, file operations, or AI integration.
 
 ---
 
 ## Roadmap
 
-- [x]**F1 — Estiagem:** marca notas inativas com `decay_level: 1`
-- [x]**F2 — Desconexão:** snapshot Git + quebra de wikilinks
-- [ ]**F3 — Dissolução:** compressão via IA + fossilização
-- [ ]**Ressurreição:** reset automático ao referenciar nota decaída
-- [ ]**SaaS:** modalidade de IA centralizada com billing
-- [ ]**Plugin Obsidian:** integração nativa como community plugin
+- Resurrection module — automatic decay reset when a new wikilink is created pointing to a decaying note
+- i18n — interface language toggle (Portuguese / English)
+- SaaS mode — centralized AI key with usage billing via Stripe
+- Official Obsidian plugin — native integration as a Community Plugin
 
 ---
 
-## Licença
+## License
 
-MIT © 2026
+MIT © 2026 Matheus Farah
