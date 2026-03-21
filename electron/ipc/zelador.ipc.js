@@ -19,9 +19,9 @@ const logBuffer = [];
 let activeProcess = null;
 
 /**
- * Adiciona uma linha ao buffer de logs, limitando ao tamanho máximo.
- * @param {string} line
- */
+* Adiciona uma linha ao buffer de logs, limitando ao tamanho máximo.
+* @param {string} line
+*/
 function addLog(line) {
   logBuffer.push(line);
   if (logBuffer.length > MAX_LOG_LINES) {
@@ -30,12 +30,12 @@ function addLog(line) {
 }
 
 /**
- * Executa o zelador.js em processo filho separado.
- * Coleta stdout/stderr no buffer de logs.
- *
- * @param {string} vaultPath - Caminho do vault (sobrescreve o padrão do zelador.js)
- * @returns {Promise<void>} Resolve quando o processo termina com sucesso
- */
+* Executa o zelador.js em processo filho separado.
+* Coleta stdout/stderr no buffer de logs.
+*
+* @param {string} vaultPath - Caminho do vault (sobrescreve o padrão do zelador.js)
+* @returns {Promise<void>} Resolve quando o processo termina com sucesso
+*/
 function runZeladorProcess(vaultPath) {
   return new Promise((resolve, reject) => {
     if (activeProcess) {
@@ -44,10 +44,10 @@ function runZeladorProcess(vaultPath) {
       return reject(new Error(msg));
     }
 
-    addLog(`[${new Date().toISOString()}] 🚀 Iniciando Zelador...`);
+    addLog(`[${new Date().toISOString()}] Iniciando Zelador...`);
 
     const env = {
-      ...process.env,
+     ...process.env,
       ZELADOR_VAULT_OVERRIDE: vaultPath || '',
     };
 
@@ -69,10 +69,10 @@ function runZeladorProcess(vaultPath) {
     activeProcess.on('close', (code) => {
       activeProcess = null;
       if (code === 0) {
-        addLog(`[${new Date().toISOString()}] ✅ Zelador finalizado com sucesso.`);
+        addLog(`[${new Date().toISOString()}] Zelador finalizado com sucesso.`);
         resolve();
       } else {
-        const msg = `[${new Date().toISOString()}] ❌ Zelador encerrou com código ${code}.`;
+        const msg = `[${new Date().toISOString()}] Zelador encerrou com código ${code}.`;
         addLog(msg);
         reject(new Error(msg));
       }
@@ -88,12 +88,12 @@ function runZeladorProcess(vaultPath) {
 }
 
 /**
- * Registra os handlers IPC do Zelador no ipcMain.
- *
- * @param {Electron.IpcMain} ipcMain
- * @param {function} getStatusFn - Retorna { status, lastRunAt, nextRunAt }
- * @param {function} runNowFn    - Dispara execução manual
- */
+* Registra os handlers IPC do Zelador no ipcMain.
+*
+* @param {Electron.IpcMain} ipcMain
+* @param {function} getStatusFn - Retorna { status, lastRunAt, nextRunAt }
+* @param {function} runNowFn    - Dispara execução manual
+*/
 function register(ipcMain, getStatusFn, runNowFn) {
   ipcMain.handle('zelador:run-now', async () => {
     await runNowFn();
@@ -111,7 +111,7 @@ function register(ipcMain, getStatusFn, runNowFn) {
     if (activeProcess) {
       activeProcess.kill('SIGTERM');
       activeProcess = null;
-      addLog(`[${new Date().toISOString()}] 🛑 Zelador interrompido manualmente.`);
+      addLog(`[${new Date().toISOString()}] � Zelador interrompido manualmente.`);
     }
   });
 }

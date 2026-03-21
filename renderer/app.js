@@ -402,8 +402,8 @@ $('cfg-save-key')?.addEventListener('click', async () => {
     await refreshKeyStatus(changingKeyProvider);
     $('cfg-key-form').classList.add('hidden');
     changingKeyProvider = null;
-  } catch (e) { 
-    console.error(e); 
+  } catch (e) {
+    console.error(e);
     alert(`Erro de validação: ${e.message}`);
   } finally {
     btn.textContent = originalText;

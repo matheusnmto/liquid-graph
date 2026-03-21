@@ -6,12 +6,12 @@ const { glob } = require('glob');
 const { IGNORED_DIRS, SAFETY_BUFFER_MS } = require('../config/defaults');
 
 /**
- * Varre o vault em busca de todos os arquivos .md,
- * excluindo pastas protegidas e arquivos muito recentes (buffer de segurança).
- *
- * @param {string} vaultPath - Caminho absoluto para a raiz do vault
- * @returns {Promise<Array<{filePath: string, mtime: Date, inactivityMs: number}>>}
- */
+* Varre o vault em busca de todos os arquivos.md,
+* excluindo pastas protegidas e arquivos muito recentes (buffer de segurança).
+*
+* @param {string} vaultPath - Caminho absoluto para a raiz do vault
+* @returns {Promise<Array<{filePath: string, mtime: Date, inactivityMs: number}>>}
+*/
 async function scanVault(vaultPath) {
   const now = Date.now();
 
@@ -34,7 +34,7 @@ async function scanVault(vaultPath) {
       stat = fs.statSync(filePath);
     } catch (err) {
       // Arquivo pode ter sido removido entre o glob e o stat — ignorar silenciosamente
-      log(`⚠️  Não foi possível ler stat de ${filePath}: ${err.message}`);
+      log(`Não foi possível ler stat de ${filePath}: ${err.message}`);
       continue;
     }
 
@@ -57,24 +57,24 @@ async function scanVault(vaultPath) {
 }
 
 /**
- * Retorna o caminho relativo de um arquivo em relação ao vault.
- * Útil para logs e para resolução de config por pasta.
- *
- * @param {string} vaultPath
- * @param {string} filePath
- * @returns {string} ex: "/fleeting/minha-nota.md"
- */
+* Retorna o caminho relativo de um arquivo em relação ao vault.
+* Útil para logs e para resolução de config por pasta.
+*
+* @param {string} vaultPath
+* @param {string} filePath
+* @returns {string} ex: "/fleeting/minha-nota.md"
+*/
 function getRelativePath(vaultPath, filePath) {
   return '/' + path.relative(vaultPath, filePath);
 }
 
 /**
- * Retorna apenas o nome da nota sem extensão e sem caminho.
- * Usado para wikilinks e mensagens de log.
- *
- * @param {string} filePath
- * @returns {string} ex: "Ideia App Restaurante"
- */
+* Retorna apenas o nome da nota sem extensão e sem caminho.
+* Usado para wikilinks e mensagens de log.
+*
+* @param {string} filePath
+* @returns {string} ex: "Ideia App Restaurante"
+*/
 function getNoteTitle(filePath) {
   return path.basename(filePath, '.md');
 }

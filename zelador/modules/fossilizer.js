@@ -24,15 +24,15 @@ function toPTDate(date = new Date()) {
 }
 
 /**
- * Fossiliza uma nota:
- *   1. Copia o original para _fossilized/YYYY-MM/nome.md
- *   2. Sobrescreve o original com uma nota leve contendo o resumo da IA
- *
- * @param {string} filePath   - Caminho absoluto da nota decaída
- * @param {string} vaultPath  - Raiz do vault
- * @param {string} summary    - Resumo gerado pela IA (uma frase)
- * @returns {{ fossilizedPath: string, lightNotePath: string }}
- */
+* Fossiliza uma nota:
+*   1. Copia o original para _fossilized/YYYY-MM/nome.md
+*   2. Sobrescreve o original com uma nota leve contendo o resumo da IA
+*
+* @param {string} filePath   - Caminho absoluto da nota decaída
+* @param {string} vaultPath  - Raiz do vault
+* @param {string} summary    - Resumo gerado pela IA (uma frase)
+* @returns {{ fossilizedPath: string, lightNotePath: string }}
+*/
 function fossilize(filePath, vaultPath, summary) {
   const now      = new Date();
   const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -64,7 +64,7 @@ decay_immune: true
 ---
 
 > [!fossil] Nota dissolvida em ${ptDate}
-> **Resumo:** ${summary}
+>**Resumo:** ${summary}
 > [Recuperar nota original](${relFossilPath})
 `;
 

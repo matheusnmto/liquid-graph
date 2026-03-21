@@ -38,9 +38,9 @@ function escapeRegex(str) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} noteName - Nome da nota sem extensão
- * @returns {RegExp}
- */
+* @param {string} noteName - Nome da nota sem extensão
+* @returns {RegExp}
+*/
 function buildSearchPattern(noteName) {
   if (!noteName || typeof noteName !== 'string' || noteName.trim() === '') {
     throw new TypeError('buildSearchPattern: noteName deve ser uma string não-vazia');
@@ -61,9 +61,9 @@ function buildSearchPattern(noteName) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} noteName
- * @returns {{ pattern: RegExp, replacer: function }}
- */
+* @param {string} noteName
+* @returns {{ pattern: RegExp, replacer: function }}
+*/
 function buildReplacePattern(noteName) {
   if (!noteName || typeof noteName !== 'string' || noteName.trim() === '') {
     throw new TypeError('buildReplacePattern: noteName deve ser uma string não-vazia');
@@ -74,7 +74,7 @@ function buildReplacePattern(noteName) {
   const pattern = new RegExp(
     `\\[\\[${e}(?:[#^][^\\]|]+)?(?:\\|([^\\]]+))?\\]\\]`,
     'g'
-  );
+ );
   const replacer = (_match, alias) => (alias ? alias.trim() : noteName);
   return { pattern, replacer };
 }
@@ -84,11 +84,11 @@ function buildReplacePattern(noteName) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Retorna true se o arquivo deve ser ignorado pelo linkBreaker.
- * - Pastas protegidas pelo sistema
- * - Modificado nas últimas 24h (buffer de segurança)
- * - Não é .md
- */
+* Retorna true se o arquivo deve ser ignorado pelo linkBreaker.
+* - Pastas protegidas pelo sistema
+* - Modificado nas últimas 24h (buffer de segurança)
+* - Não é.md
+*/
 function shouldSkipFile(filePath, decayingFilePath) {
   // Nunca toca a própria nota decaída — frontmatter.js cuida dela
   if (filePath === decayingFilePath) return true;
@@ -119,11 +119,11 @@ function shouldSkipFile(filePath, decayingFilePath) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} vaultPath
- * @param {string} noteName
- * @param {string} decayingFilePath - Caminho da nota decaída (excluída da busca)
- * @returns {Promise<Array<{filePath: string, occurrences: number}>>}
- */
+* @param {string} vaultPath
+* @param {string} noteName
+* @param {string} decayingFilePath - Caminho da nota decaída (excluída da busca)
+* @returns {Promise<Array<{filePath: string, occurrences: number}>>}
+*/
 async function findAllReferences(vaultPath, noteName, decayingFilePath) {
   const ignorePatterns = IGNORED_DIRS.map(dir => `**/${dir}/**`);
 
@@ -144,7 +144,7 @@ async function findAllReferences(vaultPath, noteName, decayingFilePath) {
     try {
       content = fs.readFileSync(filePath, { encoding: 'utf-8' });
     } catch (err) {
-      log(`⚠️  Sem permissão de leitura em ${path.basename(filePath)}: ${err.message}`, noteName);
+      log(`Sem permissão de leitura em ${path.basename(filePath)}: ${err.message}`, noteName);
       continue;
     }
 
@@ -165,16 +165,16 @@ async function findAllReferences(vaultPath, noteName, decayingFilePath) {
 // Principal função pública: substitui todos os wikilinks [[noteName]]
 // por texto simples em todos os arquivos do vault.
 //
-// ⚠️  ATENÇÃO: esta função modifica arquivos FORA da nota decaída.
+// ATENÇÃO: esta função modifica arquivos FORA da nota decaída.
 //              Sempre chamada APÓS git.commitSnapshot().
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} vaultPath
- * @param {string} noteName
- * @param {string} decayingFilePath - Excluída da varredura
- * @returns {Promise<{ filesModified: number, totalLinksRemoved: number }>}
- */
+* @param {string} vaultPath
+* @param {string} noteName
+* @param {string} decayingFilePath - Excluída da varredura
+* @returns {Promise<{ filesModified: number, totalLinksRemoved: number }>}
+*/
 async function breakLinks(vaultPath, noteName, decayingFilePath) {
   log(`Iniciando quebra de links para: "${noteName}"`, noteName);
 
@@ -194,7 +194,7 @@ async function breakLinks(vaultPath, noteName, decayingFilePath) {
     try {
       content = fs.readFileSync(filePath, { encoding: 'utf-8' });
     } catch (err) {
-      log(`⚠️  Erro ao ler ${path.basename(filePath)}: ${err.message}`, noteName);
+      log(`Erro ao ler ${path.basename(filePath)}: ${err.message}`, noteName);
       continue;
     }
 
@@ -208,9 +208,9 @@ async function breakLinks(vaultPath, noteName, decayingFilePath) {
         fs.writeFileSync(filePath, newContent, { encoding: 'utf-8' });
         filesModified++;
         totalLinksRemoved += occurrences;
-        log(`✂️  ${path.basename(filePath)}: ${occurrences} link(s) removido(s)`, noteName);
+        log(`✂${path.basename(filePath)}: ${occurrences} link(s) removido(s)`, noteName);
       } catch (err) {
-        log(`❌ Erro ao escrever ${path.basename(filePath)}: ${err.message}`, noteName);
+        log(`Erro ao escrever ${path.basename(filePath)}: ${err.message}`, noteName);
       }
     }
   }

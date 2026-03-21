@@ -1,10 +1,10 @@
 'use strict';
 
 /**
- * Constantes e thresholds padrão do Zelador.
- * Estes valores são usados quando não há decay.config.json
- * ou quando a pasta da nota não tem configuração específica.
- */
+* Constantes e thresholds padrão do Zelador.
+* Estes valores são usados quando não há decay.config.json
+* ou quando a pasta da nota não tem configuração específica.
+*/
 
 const DEFAULTS = {
   phase1_days: 30,
@@ -13,10 +13,10 @@ const DEFAULTS = {
 };
 
 // Número de milissegundos em um dia
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MS_PER_DAY = 24* 60* 60* 1000;
 
 // Buffer de segurança: ignora arquivos modificados nas últimas 24h
-const SAFETY_BUFFER_MS = 24 * 60 * 60 * 1000;
+const SAFETY_BUFFER_MS = 24* 60* 60* 1000;
 
 // Janela de alerta do Purgatório: listar notas que vão para F3 em até N dias
 const PURGATORY_WARN_DAYS = 30;

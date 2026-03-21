@@ -35,10 +35,10 @@ function loadConfig() {
     const raw = fs.readFileSync(configPath, 'utf8');
     const parsed = JSON.parse(raw);
     // Garante que global sempre existe com todos os campos
-    parsed.global = { ...DEFAULTS, ...(parsed.global || {}) };
+    parsed.global = {...DEFAULTS,...(parsed.global || {}) };
     return parsed;
   } catch (err) {
-    log(`⚠️  Erro ao ler decay.config.json: ${err.message}. Usando defaults.`);
+    log(`Erro ao ler decay.config.json: ${err.message}. Usando defaults.`);
     return { global: DEFAULTS, folders: {} };
   }
 }
@@ -62,13 +62,13 @@ function resolveConfig(relativePath, config) {
     const folderConfig = config.folders && config.folders[prefix];
     if (folderConfig) {
       if (folderConfig.decay_immune === true) {
-        return { ...config.global, decay_immune: true };
+        return {...config.global, decay_immune: true };
       }
-      return { ...config.global, ...folderConfig };
+      return {...config.global,...folderConfig };
     }
   }
 
-  return { ...config.global };
+  return {...config.global };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -85,8 +85,8 @@ function ensureZeladorDir() {
 // MAIN
 // ─────────────────────────────────────────────────────────────────────────────
 async function main() {
-  log('🌊 Zelador iniciando...');
-  log(`📁 Vault: ${VAULT_PATH}`);
+  log('Zelador iniciando...');
+  log(`Vault: ${VAULT_PATH}`);
 
   registerExitHandlers();
   acquireLock();
@@ -94,12 +94,12 @@ async function main() {
 
   // ── Carrega configuração ──
   const config = loadConfig();
-  log(`⚙️  Configuração: ${Object.keys(config.folders || {}).length} pasta(s) configurada(s).`);
+  log(`Configuração: ${Object.keys(config.folders || {}).length} pasta(s) configurada(s).`);
 
   // ── Varre o vault ──
-  log('🔍 Varrendo vault...');
+  log('Varrendo vault...');
   const files = await scanVault(VAULT_PATH);
-  log(`📝 ${files.length} arquivo(s) avaliado(s).`);
+  log(`${files.length} arquivo(s) avaliado(s).`);
 
   // Contadores para o relatório final
   const stats = {
@@ -121,7 +121,7 @@ async function main() {
     try {
       frontmatterData = readFrontmatter(filePath).data;
     } catch (err) {
-      log(`⚠️  Erro ao ler frontmatter de ${relativePath}: ${err.message}`);
+      log(`Erro ao ler frontmatter de ${relativePath}: ${err.message}`);
       stats.errors++;
       continue;
     }
@@ -194,7 +194,7 @@ async function main() {
       }
 
     } catch (err) {
-      log(`❌ Erro ao processar ${relativePath}: ${err.message}`);
+      log(`Erro ao processar ${relativePath}: ${err.message}`);
       stats.errors++;
     }
   }

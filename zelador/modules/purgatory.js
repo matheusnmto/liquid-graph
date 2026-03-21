@@ -21,23 +21,23 @@ function log(msg) {
 }
 
 /**
- * Formata uma data ISO como YYYY-MM-DD.
- * @param {Date} date
- * @returns {string}
- */
+* Formata uma data ISO como YYYY-MM-DD.
+* @param {Date} date
+* @returns {string}
+*/
 function toISODate(date) {
   return date.toISOString().split('T')[0];
 }
 
 /**
- * Calcula a data de dissolução (Fase 3) de uma nota.
- *
- * @param {Date} mtime - Última modificação
- * @param {number} phase3Days - Threshold de dias para F3
- * @returns {Date}
- */
+* Calcula a data de dissolução (Fase 3) de uma nota.
+*
+* @param {Date} mtime - Última modificação
+* @param {number} phase3Days - Threshold de dias para F3
+* @returns {Date}
+*/
 function calcDissolutionDate(mtime, phase3Days) {
-  return new Date(mtime.getTime() + phase3Days * MS_PER_DAY);
+  return new Date(mtime.getTime() + phase3Days* MS_PER_DAY);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,11 +47,11 @@ function calcDissolutionDate(mtime, phase3Days) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} vaultPath
- * @param {object} config - Configuração completa { global, folders }
- * @param {function} resolveConfigFn - Função resolveConfig(relativePath, config) do zelador.js
- * @returns {Promise<Array<{filePath, noteName, folder, dissolutionDate, daysRemaining}>>}
- */
+* @param {string} vaultPath
+* @param {object} config - Configuração completa { global, folders }
+* @param {function} resolveConfigFn - Função resolveConfig(relativePath, config) do zelador.js
+* @returns {Promise<Array<{filePath, noteName, folder, dissolutionDate, daysRemaining}>>}
+*/
 async function buildPurgatoryList(vaultPath, config, resolveConfigFn) {
   const now = Date.now();
   const ignorePatterns = IGNORED_DIRS.map(dir => `**/${dir}/**`);
@@ -121,11 +121,11 @@ async function buildPurgatoryList(vaultPath, config, resolveConfigFn) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} vaultPath
- * @param {object} config
- * @param {function} resolveConfigFn
- * @returns {Promise<{ written: boolean, items: number }>}
- */
+* @param {string} vaultPath
+* @param {object} config
+* @param {function} resolveConfigFn
+* @returns {Promise<{ written: boolean, items: number }>}
+*/
 async function generatePurgatory(vaultPath, config, resolveConfigFn) {
   const candidates = await buildPurgatoryList(vaultPath, config, resolveConfigFn);
   const purgatoryPath = path.join(vaultPath, PURGATORY_FILE);
@@ -143,21 +143,21 @@ async function generatePurgatory(vaultPath, config, resolveConfigFn) {
   }
 
   const urgentSection = urgent.length > 0
-    ? `## 🔴 Próximos ${PURGATORY_URGENT_DAYS} dias\n\n${tableHeader}\n${urgent.map(toRow).join('\n')}`
-    : `## 🔴 Próximos ${PURGATORY_URGENT_DAYS} dias\n\n*Nenhuma nota urgente. ✅*`;
+    ? `## Próximos ${PURGATORY_URGENT_DAYS} dias\n\n${tableHeader}\n${urgent.map(toRow).join('\n')}`
+    : `## Próximos ${PURGATORY_URGENT_DAYS} dias\n\n*Nenhuma nota urgente.*`;
 
   const upcomingSection = upcoming.length > 0
-    ? `## 🟡 Próximos ${PURGATORY_WARN_DAYS} dias\n\n${tableHeader}\n${upcoming.map(toRow).join('\n')}`
-    : `## 🟡 Próximos ${PURGATORY_WARN_DAYS} dias\n\n*Nenhuma nota programada para este período.*`;
+    ? `## � Próximos ${PURGATORY_WARN_DAYS} dias\n\n${tableHeader}\n${upcoming.map(toRow).join('\n')}`
+    : `## � Próximos ${PURGATORY_WARN_DAYS} dias\n\n*Nenhuma nota programada para este período.*`;
 
   const content = `---
 tags: [zelador, sistema]
 decay_immune: true
 ---
 
-# 🔥 Purgatório — Notas condenadas à dissolução
+# Purgatório — Notas condenadas à dissolução
 
-> **Atenção:** Estas notas serão comprimidas pelo Zelador nas datas indicadas.
+>**Atenção:** Estas notas serão comprimidas pelo Zelador nas datas indicadas.
 > Abra qualquer uma delas para resetar o decaimento automaticamente.
 > Última atualização: ${toISODate(now)} ${now.toTimeString().slice(0, 5)}
 

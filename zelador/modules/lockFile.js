@@ -6,9 +6,9 @@ const fs = require('fs');
 const LOCK_PATH = '/tmp/zelador.lock';
 
 /**
- * Tenta adquirir o lock. Se outro processo estiver rodando,
- * exibe erro e encerra imediatamente.
- */
+* Tenta adquirir o lock. Se outro processo estiver rodando,
+* exibe erro e encerra imediatamente.
+*/
 function acquireLock() {
   if (fs.existsSync(LOCK_PATH)) {
     const pid = fs.readFileSync(LOCK_PATH, 'utf8').trim();
@@ -19,8 +19,8 @@ function acquireLock() {
 }
 
 /**
- * Remove o lock file. Chamado em todos os cenários de saída.
- */
+* Remove o lock file. Chamado em todos os cenários de saída.
+*/
 function releaseLock() {
   try {
     if (fs.existsSync(LOCK_PATH)) fs.unlinkSync(LOCK_PATH);
@@ -30,21 +30,21 @@ function releaseLock() {
 }
 
 /**
- * Registra handlers para garantir que o lock seja sempre liberado,
- * independente de como o processo termina.
- */
+* Registra handlers para garantir que o lock seja sempre liberado,
+* independente de como o processo termina.
+*/
 function registerExitHandlers() {
   process.on('exit', releaseLock);
   process.on('SIGINT', () => { releaseLock(); process.exit(0); });
   process.on('SIGTERM', () => { releaseLock(); process.exit(0); });
   process.on('uncaughtException', (err) => {
-    console.error(`[${timestamp()}] 💥 Erro não capturado: ${err.message}`);
+    console.error(`[${timestamp()}] Erro não capturado: ${err.message}`);
     console.error(err.stack);
     releaseLock();
     process.exit(1);
   });
   process.on('unhandledRejection', (reason) => {
-    console.error(`[${timestamp()}] 💥 Promise rejeitada: ${reason}`);
+    console.error(`[${timestamp()}] Promise rejeitada: ${reason}`);
     releaseLock();
     process.exit(1);
   });

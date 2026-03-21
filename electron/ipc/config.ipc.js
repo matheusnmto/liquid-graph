@@ -17,9 +17,9 @@ const KEYTAR_ACCOUNTS = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Registra todos os handlers IPC de configuração.
- * @param {import('electron-store')} store - Instância do electron-store
- */
+* Registra todos os handlers IPC de configuração.
+* @param {import('electron-store')} store - Instância do electron-store
+*/
 module.exports = function registerConfigHandlers(store) {
 
   // ── Leitura de config ─────────────────────────────────────────────────────

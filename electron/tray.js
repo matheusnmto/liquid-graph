@@ -10,16 +10,16 @@ const path = require('path');
 let trayInstance = null;
 
 /**
- * Cria e configura o ícone na system tray.
- *
- * @param {object} opts
- * @param {Electron.BrowserWindow} opts.mainWindow - Janela principal
- * @param {function(): string} opts.getStatus  - Retorna status atual ('idle'|'running'|'error')
- * @param {function(): string} opts.nextRunAt  - Retorna next run como "HH:MM"
- * @param {function(): Promise<void>} opts.onRunNow - Callback para execução manual
- * @param {function(): void} opts.onQuit      - Callback para encerrar o app
- * @returns {Electron.Tray}
- */
+* Cria e configura o ícone na system tray.
+*
+* @param {object} opts
+* @param {Electron.BrowserWindow} opts.mainWindow - Janela principal
+* @param {function(): string} opts.getStatus  - Retorna status atual ('idle'|'running'|'error')
+* @param {function(): string} opts.nextRunAt  - Retorna next run como "HH:MM"
+* @param {function(): Promise<void>} opts.onRunNow - Callback para execução manual
+* @param {function(): void} opts.onQuit      - Callback para encerrar o app
+* @returns {Electron.Tray}
+*/
 function setupTray({ mainWindow, getStatus, nextRunAt, onRunNow, onQuit }) {
   // Ícone — usa PNG da pasta assets, fallback para ícone vazio
   const iconPath = path.join(__dirname, '..', 'assets', 'tray-icon.png');
@@ -35,19 +35,19 @@ function setupTray({ mainWindow, getStatus, nextRunAt, onRunNow, onQuit }) {
   trayInstance = new Tray(icon);
 
   /**
-   * Reconstrói o menu contextual com dados atualizados.
-   * Chamado na criação e sempre que o status mudar.
-   */
+  * Reconstrói o menu contextual com dados atualizados.
+  * Chamado na criação e sempre que o status mudar.
+  */
   function buildMenu() {
     const status = getStatus();
     const nextRun = nextRunAt();
     const isRunning = status === 'running';
 
     const statusLabel = isRunning
-      ? '⏳ Zelador em execução...'
+      ? 'Zelador em execução...'
       : status === 'error'
-      ? '❌ Último erro — ver logs'
-      : `✅ Aguardando — próxima: ${nextRun}`;
+      ? 'Último erro — ver logs'
+      : `Aguardando — próxima: ${nextRun}`;
 
     return Menu.buildFromTemplate([
       {
@@ -62,7 +62,7 @@ function setupTray({ mainWindow, getStatus, nextRunAt, onRunNow, onQuit }) {
       },
       { type: 'separator' },
       {
-        label: '📂 Abrir',
+        label: 'Abrir',
         click: () => {
           if (mainWindow) {
             mainWindow.show();
@@ -90,7 +90,7 @@ function setupTray({ mainWindow, getStatus, nextRunAt, onRunNow, onQuit }) {
       },
       { type: 'separator' },
       {
-        label: '🚪 Sair',
+        label: '� Sair',
         click: onQuit,
       },
     ]);
@@ -111,11 +111,11 @@ function setupTray({ mainWindow, getStatus, nextRunAt, onRunNow, onQuit }) {
 }
 
 /**
- * Atualiza o tooltip e menu da tray.
- * Chamado pelo main.js quando o status do Zelador muda.
- *
- * @param {{ status: string, nextRunAt: string }} data
- */
+* Atualiza o tooltip e menu da tray.
+* Chamado pelo main.js quando o status do Zelador muda.
+*
+* @param {{ status: string, nextRunAt: string }} data
+*/
 function updateTray(data) {
   if (!trayInstance) return;
   trayInstance.setToolTip(`Zelador — próxima execução: ${data.nextRunAt}`);

@@ -33,7 +33,7 @@ function withTimeout(promise, ms, label) {
       err.code = 'TIMEOUT';
       reject(err);
     }, ms)
-  );
+ );
   return Promise.race([promise, timer]);
 }
 
@@ -52,7 +52,7 @@ async function callGoogle(content, apiKey, isRetry = false) {
       model.generateContent(SYSTEM_PROMPT + '\n\nNota:\n' + content),
       TIMEOUT_MS,
       'google'
-    );
+   );
     return result.response.text().trim();
   } catch (err) {
     if (err.code === 'TIMEOUT') throw err;
@@ -97,7 +97,7 @@ async function callAnthropic(content, apiKey, isRetry = false) {
       }),
       TIMEOUT_MS,
       'anthropic'
-    );
+   );
     return response.content.filter(b => b.type === 'text').map(b => b.text).join('').trim();
   } catch (err) {
     if (err.code === 'TIMEOUT') throw err;
@@ -129,8 +129,8 @@ async function callAnthropic(content, apiKey, isRetry = false) {
 // ─── Interface pública ────────────────────────────────────────────────────────
 
 /**
- * Lista os providers disponíveis.
- */
+* Lista os providers disponíveis.
+*/
 function listProviders() {
   return [
     { id: 'google',    name: 'Google Gemini',    model: 'gemini-1.5-flash',         costPer1kTokens: 0.000075 },
@@ -139,12 +139,12 @@ function listProviders() {
 }
 
 /**
- * Comprime uma nota em uma frase usando o provider configurado.
- *
- * @param {string} content         - Conteúdo da nota
- * @param {{ provider: string, apiKey: string }} providerConfig
- * @returns {Promise<string>}
- */
+* Comprime uma nota em uma frase usando o provider configurado.
+*
+* @param {string} content         - Conteúdo da nota
+* @param {{ provider: string, apiKey: string }} providerConfig
+* @returns {Promise<string>}
+*/
 async function compress(content, providerConfig) {
   const { provider, apiKey } = providerConfig;
 
@@ -174,12 +174,12 @@ async function compress(content, providerConfig) {
 }
 
 /**
- * Valida uma API key fazendo uma chamada minima.
- *
- * @param {'google'|'anthropic'} provider
- * @param {string} apiKey
- * @returns {Promise<{ valid: boolean, error?: string }>}
- */
+* Valida uma API key fazendo uma chamada minima.
+*
+* @param {'google'|'anthropic'} provider
+* @param {string} apiKey
+* @returns {Promise<{ valid: boolean, error?: string }>}
+*/
 async function validateKey(provider, apiKey) {
   if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') {
     return { valid: false, error: 'Chave nao pode ser vazia.' };

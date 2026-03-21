@@ -13,13 +13,13 @@ function log(msg) {
 }
 
 /**
- * Executa um comando git no vault com timeout de 30s.
- * Retorna stdout como string. Lança erro em qualquer falha não tratada.
- *
- * @param {string} cmd - Comando git (ex: 'status --porcelain')
- * @param {string} vaultPath - Diretório de trabalho
- * @returns {string} stdout do comando
- */
+* Executa um comando git no vault com timeout de 30s.
+* Retorna stdout como string. Lança erro em qualquer falha não tratada.
+*
+* @param {string} cmd - Comando git (ex: 'status --porcelain')
+* @param {string} vaultPath - Diretório de trabalho
+* @returns {string} stdout do comando
+*/
 function execGit(cmd, vaultPath) {
   const fullCmd = `git ${cmd}`;
   return execSync(fullCmd, {
@@ -37,9 +37,9 @@ function execGit(cmd, vaultPath) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} vaultPath
- * @returns {boolean}
- */
+* @param {string} vaultPath
+* @returns {boolean}
+*/
 function isGitRepo(vaultPath) {
   return fs.existsSync(path.join(vaultPath, '.git'));
 }
@@ -50,15 +50,15 @@ function isGitRepo(vaultPath) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} vaultPath
- * @returns {boolean} true = há mudanças pendentes
- */
+* @param {string} vaultPath
+* @returns {boolean} true = há mudanças pendentes
+*/
 function checkCleanStatus(vaultPath) {
   try {
     const output = execGit('status --porcelain', vaultPath);
     return output.length > 0; // qualquer linha = mudança pendente
   } catch (err) {
-    log(`⚠️  Não foi possível verificar status: ${err.message}`);
+    log(`Não foi possível verificar status: ${err.message}`);
     return false;
   }
 }
@@ -69,9 +69,9 @@ function checkCleanStatus(vaultPath) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} vaultPath
- * @returns {string|null} hash curto (7 chars) ou null se sem commits
- */
+* @param {string} vaultPath
+* @returns {string|null} hash curto (7 chars) ou null se sem commits
+*/
 function getLastCommitHash(vaultPath) {
   try {
     return execGit('rev-parse --short HEAD', vaultPath);
@@ -93,25 +93,25 @@ function getLastCommitHash(vaultPath) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} vaultPath
- * @param {string} noteName  - Nome do arquivo sem extensão (ex: "Minha Nota")
- * @param {'F2'|'F3'} phase  - Fase que está sendo executada
- * @returns {{ success: boolean, commitHash: string|null, skipped: boolean, error: string|null }}
- */
+* @param {string} vaultPath
+* @param {string} noteName  - Nome do arquivo sem extensão (ex: "Minha Nota")
+* @param {'F2'|'F3'} phase  - Fase que está sendo executada
+* @returns {{ success: boolean, commitHash: string|null, skipped: boolean, error: string|null }}
+*/
 function commitSnapshot(vaultPath, noteName, phase) {
   // ── Pré-condição: git deve estar instalado ──
   try {
     execSync('git --version', { timeout: 5000, stdio: 'pipe' });
   } catch (_) {
     const error = 'Git não encontrado no PATH. Instale em: https://git-scm.com/downloads';
-    log(`❌ ${error}`);
+    log(`${error}`);
     return { success: false, commitHash: null, skipped: false, error };
   }
 
   // ── Pré-condição: repositório inicializado ──
   if (!isGitRepo(vaultPath)) {
     const error = `Repositório Git não encontrado em ${vaultPath}. Execute: git init`;
-    log(`❌ ${error}`);
+    log(`${error}`);
     return { success: false, commitHash: null, skipped: false, error };
   }
 
@@ -126,7 +126,7 @@ function commitSnapshot(vaultPath, noteName, phase) {
     execGit(`commit -m "${message}"`, vaultPath);
 
     const commitHash = getLastCommitHash(vaultPath);
-    log(`✅ Snapshot commitado: ${commitHash} — ${message}`);
+    log(`Snapshot commitado: ${commitHash} — ${message}`);
     return { success: true, commitHash, skipped: false, error: null };
 
   } catch (err) {
@@ -138,21 +138,21 @@ function commitSnapshot(vaultPath, noteName, phase) {
       output.includes('nothing to commit') ||
       stderr.includes('nothing to commit') ||
       (err.message || '').includes('nothing to commit')
-    ) {
-      log('ℹ️  Nada a commitar — vault já está limpo. Prosseguindo.');
+   ) {
+      log('Nada a commitar — vault já está limpo. Prosseguindo.');
       return { success: true, commitHash: null, skipped: true, error: null };
     }
 
     // Timeout
     if (err.signal === 'SIGTERM' || err.code === 'ETIMEDOUT') {
       const error = `Git timeout após 30s ao commitar "${noteName}"`;
-      log(`❌ ${error}`);
+      log(`${error}`);
       return { success: false, commitHash: null, skipped: false, error };
     }
 
     // Erro genérico — retorna falha, zelador vai abortar esta nota
     const error = `Git commit falhou: ${err.message || stderr}`;
-    log(`❌ ${error}`);
+    log(`${error}`);
     return { success: false, commitHash: null, skipped: false, error };
   }
 }

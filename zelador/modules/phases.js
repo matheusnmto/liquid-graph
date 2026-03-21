@@ -16,11 +16,11 @@ function toISODate(date = new Date()) {
 }
 
 /**
- * Logger com prefixo de fase e nome da nota.
- * @param {string} phase - ex: 'F1', 'F2'
- * @param {string} noteName
- * @returns {function} logger
- */
+* Logger com prefixo de fase e nome da nota.
+* @param {string} phase - ex: 'F1', 'F2'
+* @param {string} noteName
+* @returns {function} logger
+*/
 function makeLogger(phase, noteName) {
   return (msg) => {
     const t = new Date().toISOString().slice(11, 19);
@@ -29,12 +29,12 @@ function makeLogger(phase, noteName) {
 }
 
 /**
- * Persiste informações parciais no state.json para auditoria.
- * Não lança erro — falha silenciosa (state.json é diagnóstico, não crítico).
- *
- * @param {string} vaultPath
- * @param {object} update - Campos a mesclar no state atual
- */
+* Persiste informações parciais no state.json para auditoria.
+* Não lança erro — falha silenciosa (state.json é diagnóstico, não crítico).
+*
+* @param {string} vaultPath
+* @param {object} update - Campos a mesclar no state atual
+*/
 function updateState(vaultPath, update) {
   const statePath = path.join(vaultPath, STATE_FILE);
   try {
@@ -42,7 +42,7 @@ function updateState(vaultPath, update) {
     if (fs.existsSync(statePath)) {
       current = JSON.parse(fs.readFileSync(statePath, 'utf8'));
     }
-    const merged = { ...current, ...update, lastRun: new Date().toISOString() };
+    const merged = {...current,...update, lastRun: new Date().toISOString() };
     fs.writeFileSync(statePath, JSON.stringify(merged, null, 2), 'utf8');
   } catch (_) {
     // state.json é auxiliar — nunca aborta execução por isso
@@ -55,10 +55,10 @@ function updateState(vaultPath, update) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} filePath
- * @param {object} currentData - Frontmatter já parseado
- * @returns {boolean} true se a fase foi aplicada
- */
+* @param {string} filePath
+* @param {object} currentData - Frontmatter já parseado
+* @returns {boolean} true se a fase foi aplicada
+*/
 function applyPhase1(filePath, currentData) {
   if ((currentData.decay_level ?? 0) >= 1) return false;
 
@@ -73,7 +73,7 @@ function applyPhase1(filePath, currentData) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FASE 2 — Desconexão (inatividade > phase2_days)
 //
-// ⚠️  ATENÇÃO: esta é a única fase que modifica arquivos ALÉM da nota decaída.
+// ATENÇÃO: esta é a única fase que modifica arquivos ALÉM da nota decaída.
 //              O Git backup é obrigatório e não pode ser desativado.
 //              Falha no commit = abortar toda a operação para esta nota.
 //
@@ -85,11 +85,11 @@ function applyPhase1(filePath, currentData) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} filePath    - Caminho absoluto da nota decaída
- * @param {string} vaultPath   - Caminho raiz do vault
- * @param {object} frontmatter - Frontmatter já parseado
- * @returns {Promise<{ success: boolean, filesModified: number, linksRemoved: number, commitHash: string|null, error: string|null }>}
- */
+* @param {string} filePath    - Caminho absoluto da nota decaída
+* @param {string} vaultPath   - Caminho raiz do vault
+* @param {object} frontmatter - Frontmatter já parseado
+* @returns {Promise<{ success: boolean, filesModified: number, linksRemoved: number, commitHash: string|null, error: string|null }>}
+*/
 async function applyPhase2(filePath, vaultPath, frontmatter) {
   const noteName = path.basename(filePath, '.md');
   const log = makeLogger('F2', noteName);
@@ -104,7 +104,7 @@ async function applyPhase2(filePath, vaultPath, frontmatter) {
   // ── Pré-condição: Git deve estar disponível ──
   if (!git.isGitRepo(vaultPath)) {
     const error = `Git não inicializado em ${vaultPath}. Execute: git init`;
-    log(`❌ ${error}`);
+    log(`${error}`);
     return { success: false, filesModified: 0, linksRemoved: 0, commitHash: null, error };
   }
 
@@ -113,7 +113,7 @@ async function applyPhase2(filePath, vaultPath, frontmatter) {
   const { success: gitOk, commitHash, skipped, error: gitError } = git.commitSnapshot(vaultPath, noteName, 'F2');
 
   if (!gitOk) {
-    log(`❌ Git falhou — ${gitError}. Abortando F2 para esta nota.`);
+    log(`Git falhou — ${gitError}. Abortando F2 para esta nota.`);
     return { success: false, filesModified: 0, linksRemoved: 0, commitHash: null, error: gitError };
   }
 
@@ -131,7 +131,7 @@ async function applyPhase2(filePath, vaultPath, frontmatter) {
     log(`${filesModified} arquivo(s) modificado(s), ${linksRemoved} link(s) removido(s).`);
   } catch (err) {
     // Falha no linkBreaker — grave mas não catastrófica. Atualiza frontmatter mesmo assim.
-    log(`⚠️  Erro ao quebrar links: ${err.message}. Prosseguindo com atualização de frontmatter.`);
+    log(`Erro ao quebrar links: ${err.message}. Prosseguindo com atualização de frontmatter.`);
   }
 
   // ── PASSO 3: Atualizar frontmatter da nota decaída ──
@@ -147,7 +147,7 @@ async function applyPhase2(filePath, vaultPath, frontmatter) {
     lastF2: { file: filePath, noteName, at: new Date().toISOString() },
   });
 
-  log(`✅ Fase 2 concluída. ${filesModified} arquivo(s) alterado(s).`);
+  log(`Fase 2 concluída. ${filesModified} arquivo(s) alterado(s).`);
   return { success: true, filesModified, linksRemoved, commitHash, error: null };
 }
 
@@ -157,11 +157,11 @@ async function applyPhase2(filePath, vaultPath, frontmatter) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {string} filePath       - Caminho absoluto da nota
- * @param {string} vaultPath      - Raiz do vault
- * @param {object} frontmatterData - Frontmatter ja parseado
- * @returns {Promise<{ success: boolean, summary?: string, fossilizedPath?: string, error?: string }>}
- */
+* @param {string} filePath       - Caminho absoluto da nota
+* @param {string} vaultPath      - Raiz do vault
+* @param {object} frontmatterData - Frontmatter ja parseado
+* @returns {Promise<{ success: boolean, summary?: string, fossilizedPath?: string, error?: string }>}
+*/
 async function applyPhase3(filePath, vaultPath, frontmatterData) {
   const noteName = path.basename(filePath, '.md');
   const log      = makeLogger('F3', noteName);
@@ -231,15 +231,15 @@ async function applyPhase3(filePath, vaultPath, frontmatterData) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param {number} inactivityMs
- * @param {object} config - { phase1_days, phase2_days, phase3_days, skip_phases? }
- * @returns {number|null} 1, 2, 3 ou null
- */
+* @param {number} inactivityMs
+* @param {object} config - { phase1_days, phase2_days, phase3_days, skip_phases? }
+* @returns {number|null} 1, 2, 3 ou null
+*/
 function determinePhase(inactivityMs, config) {
   const skipPhases = config.skip_phases || [];
-  const p3 = config.phase3_days * MS_PER_DAY;
-  const p2 = config.phase2_days * MS_PER_DAY;
-  const p1 = config.phase1_days * MS_PER_DAY;
+  const p3 = config.phase3_days* MS_PER_DAY;
+  const p2 = config.phase2_days* MS_PER_DAY;
+  const p1 = config.phase1_days* MS_PER_DAY;
 
   if (inactivityMs >= p3 && !skipPhases.includes(3)) return 3;
   if (inactivityMs >= p2 && !skipPhases.includes(2)) return 2;
