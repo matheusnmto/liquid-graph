@@ -427,17 +427,24 @@ $('btn-save-config')?.addEventListener('click', async () => {
   const fb = $('save-feedback');
   try {
     const vaultManual = $('cfg-vault-manual').value.trim() || $('cfg-vault-display').textContent;
+    const newVault    = vaultManual !== 'não configurado' ? vaultManual : '';
     await api.setConfig({
-      vaultPath:     vaultManual !== 'não configurado' ? vaultManual : '',
+      vaultPath:     newVault,
       schedule:      { hour: parseInt($('cfg-hour').value), minute: parseInt($('cfg-minute').value) },
       provider:      $('cfg-provider').value,
       notifications: $('cfg-notify').checked,
     });
-    fb.textContent = '✓ Salvo'; fb.className = 'save-feedback ok';
-    $('statusbar-vault').textContent = vaultManual;
-    setTimeout(() => { fb.textContent = ''; }, 2500);
+    fb.textContent = 'Salvo'; fb.className = 'save-feedback ok';
+
+    // -- Atualiza dashboard e statusbar com novo vault --
+    $('statusbar-vault').textContent = newVault || '—';
+    const vaultName = newVault ? newVault.split('/').pop() : 'vault';
+    $('dash-subtitle').textContent = vaultName;
+    await loadDashboard();
+
+    setTimeout(() => { fb.textContent = ''; fb.className = 'save-feedback'; }, 2500);
   } catch (e) {
-    fb.textContent = '✗ Erro ao salvar'; fb.className = 'save-feedback err';
+    fb.textContent = 'Erro ao salvar'; fb.className = 'save-feedback err';
   }
 });
 

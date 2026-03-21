@@ -477,8 +477,10 @@ body { display: flex; flex-direction: column; height: 100vh; }
 .key-status.err { color: var(--color-dissolucao); }
 
 .provider-badge {
-  font-size: 12px; padding: 4px 10px; border-radius: var(--radius-full);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; padding: 4px 12px; border-radius: var(--radius-full);
   background: rgba(29,158,117,0.12); color: var(--color-vital);
+  line-height: 1; white-space: nowrap; flex-shrink: 0;
 }
 .key-change-form {
   padding: 14px 0 0;
