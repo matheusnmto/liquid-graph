@@ -1,8 +1,10 @@
 'use strict';
 
+const { ipcMain } = require('electron');
 const { fork } = require('child_process');
 const path = require('path');
-const os = require('os');
+const fs   = require('fs');
+const os   = require('os');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // zelador.ipc.js — Handlers IPC para operações do Zelador
@@ -36,8 +38,8 @@ function addLog(line) {
 * @param {string} vaultPath - Caminho do vault (sobrescreve o padrão do zelador.js)
 * @returns {Promise<void>} Resolve quando o processo termina com sucesso
 */
-function runZeladorProcess(vaultPath) {
-  return new Promise((resolve, reject) => {
+async function runZeladorProcess(vaultPath, store) {
+  return new Promise(async (resolve, reject) => {
     if (activeProcess) {
       const msg = '[zelador.ipc] Zelador já está em execução. Aguarde.';
       addLog(msg);
@@ -46,9 +48,23 @@ function runZeladorProcess(vaultPath) {
 
     addLog(`[${new Date().toISOString()}] Iniciando Zelador...`);
 
+    // -- Buscar API key do keychain antes de spawnar --
+    let apiKey = '';
+    const provider = (store && store.get('provider')) || 'google';
+    try {
+      const keytar = require('keytar');
+      const accountName = provider === 'anthropic' ? 'anthropic-key' : 'google-key';
+      apiKey = (await keytar.getPassword('grafo-liquido', accountName)) || '';
+    } catch (err) {
+      addLog(`[zelador.ipc] Aviso: não foi possível ler keychain: ${err.message}`);
+    }
+
     const env = {
-     ...process.env,
+      ...process.env,
       ZELADOR_VAULT_OVERRIDE: vaultPath || '',
+      AI_PROVIDER:        provider,
+      GOOGLE_AI_API_KEY:  provider === 'google'    ? apiKey : '',
+      ANTHROPIC_API_KEY:  provider === 'anthropic' ? apiKey : '',
     };
 
     activeProcess = fork(ZELADOR_SCRIPT, [], {
@@ -94,7 +110,7 @@ function runZeladorProcess(vaultPath) {
 * @param {function} getStatusFn - Retorna { status, lastRunAt, nextRunAt }
 * @param {function} runNowFn    - Dispara execução manual
 */
-function register(ipcMain, getStatusFn, runNowFn) {
+function register(ipcMain, getStatusFn, runNowFn, store) {
   ipcMain.handle('zelador:run-now', async () => {
     await runNowFn();
   });
@@ -111,8 +127,57 @@ function register(ipcMain, getStatusFn, runNowFn) {
     if (activeProcess) {
       activeProcess.kill('SIGTERM');
       activeProcess = null;
-      addLog(`[${new Date().toISOString()}] � Zelador interrompido manualmente.`);
+      addLog(`[${new Date().toISOString()}] Zelador interrompido manualmente.`);
     }
+  });
+
+  // ── Fix 2: lista notas fossilizadas reais de _fossilized/ ────────────────
+  ipcMain.handle('fossilized:list', () => {
+    if (!store) return [];
+    const vaultPath = store.get('vaultPath');
+    if (!vaultPath) return [];
+
+    const fossilizedDir = path.join(vaultPath, '_fossilized');
+    if (!fs.existsSync(fossilizedDir)) return [];
+
+    const results = [];
+
+    let months = [];
+    try {
+      months = fs.readdirSync(fossilizedDir).filter(d => {
+        try { return fs.statSync(path.join(fossilizedDir, d)).isDirectory(); }
+        catch { return false; }
+      });
+    } catch { return []; }
+
+    for (const month of months) {
+      const monthDir = path.join(fossilizedDir, month);
+      let files = [];
+      try { files = fs.readdirSync(monthDir).filter(f => f.endsWith('.md')); }
+      catch { continue; }
+
+      for (const file of files) {
+        const filePath = path.join(monthDir, file);
+        try {
+          const stat    = fs.statSync(filePath);
+          const content = fs.readFileSync(filePath, 'utf-8');
+
+          const summaryMatch    = content.match(/\*\*Resumo:\*\*\s*(.+)/);
+          const dateMatch       = content.match(/fossilized_at:\s*(.+)/);
+
+          results.push({
+            fileName:    file.replace('.md', ''),
+            filePath,
+            month,
+            fossilizedAt: dateMatch ? dateMatch[1].trim() : month,
+            summary:     summaryMatch ? summaryMatch[1].trim() : null,
+            size:        stat.size,
+          });
+        } catch { /* ignora arquivos ilegíveis */ }
+      }
+    }
+
+    return results.sort((a, b) => b.fossilizedAt.localeCompare(a.fossilizedAt));
   });
 }
 

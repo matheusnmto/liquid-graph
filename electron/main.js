@@ -82,7 +82,7 @@ async function runZelador() {
   broadcast('zelador:status-change', { status: zeladorStatus, lastRunAt });
 
   try {
-    await runZeladorProcess(store.get('vaultPath'));
+    await runZeladorProcess(store.get('vaultPath'), store);
     zeladorStatus = 'idle';
   } catch (err) {
     console.error('[main] Zelador error:', err.message);
@@ -115,7 +115,7 @@ function registerIPCHandlers() {
   require('./ipc/config.ipc')(store);
   require('./ipc/zelador.ipc').register(ipcMain, () => ({
     zeladorStatus, lastRunAt, nextRunAt: nextRunTimeString(),
-  }), runZelador);
+  }), runZelador, store);
 }
 
 // ─── App lifecycle ────────────────────────────────────────────────────────

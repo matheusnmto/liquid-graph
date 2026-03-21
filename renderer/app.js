@@ -25,8 +25,20 @@ function showView(id) {
   const nav  = $(`nav-${id}`);
   if (view) view.classList.add('active');
   if (nav)  nav.classList.add('active');
-  if (id === 'purgatorio') renderPurgatorio();
-  if (id === 'config') loadConfig();
+  if (id === 'purgatorio')  renderPurgatorio();
+  if (id === 'config')      loadConfig();
+  if (id === 'fossilized')  renderFossilized();
+}
+
+// ── i18n ─────────────────────────────────────────────────────────────────────
+function applyTranslations() {
+  const { t } = window.i18n || {};
+  if (!t) return;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val) el.textContent = val;
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -251,6 +263,40 @@ async function loadRecentActivity() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// FOSSILIZADAS
+// ══════════════════════════════════════════════════════════════════════════════
+async function renderFossilized() {
+  const { t } = window.i18n || { t: k => k };
+  const container = $('fossilized-list');
+  if (!container) return;
+
+  container.innerHTML = '<div class="activity-empty">Carregando...</div>';
+
+  try {
+    const notes = await api.getFossilized();
+
+    if (!notes || notes.length === 0) {
+      container.innerHTML = `<div class="activity-empty">${t('fossil.empty')}</div>`;
+      return;
+    }
+
+    container.innerHTML = notes.map(note => `
+      <div class="fossil-item">
+        <div class="fossil-header-row">
+          <span class="fossil-name">${esc(note.fileName)}</span>
+          <span class="fossil-date">${esc(note.fossilizedAt)}</span>
+        </div>
+        <p class="fossil-summary">${note.summary ? esc(note.summary) : `<em>${t('fossil.noSummary')}</em>`}</p>
+        <span class="fossil-path">${esc(note.month)}</span>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('renderFossilized:', e);
+    container.innerHTML = '<div class="activity-empty">Erro ao carregar.</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // PURGATÓRIO
 // ══════════════════════════════════════════════════════════════════════════════
 // Stub — dados virão do IPC de scanner na Etapa 4
@@ -335,6 +381,10 @@ async function loadConfig() {
     $('cfg-provider').value = c.provider || 'anthropic';
     $('cfg-active-provider').textContent = c.provider === 'google' ? 'Google Gemini' : 'Anthropic Claude';
     $('cfg-notify').checked = c.notifications !== false;
+
+    // Idioma
+    const langSel = $('cfg-language');
+    if (langSel) langSel.value = c.language || 'pt-BR';
 
     // Status das chaves
     await refreshKeyStatus(c.provider || 'anthropic');
@@ -466,9 +516,30 @@ $('cfg-btn-reset')?.addEventListener('click', async () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
+// IDIOMA
+// ══════════════════════════════════════════════════════════════════════════════
+$('cfg-language')?.addEventListener('change', async (e) => {
+  const locale = e.target.value;
+  if (window.i18n) window.i18n.setLocale(locale);
+  applyTranslations();
+  // Persiste a escolha
+  try { await api.setConfig({ language: locale }); } catch (_) {}
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════════════════════
 async function initApp() {
+  // Carregar idioma salvo
+  try {
+    const cfg = await api.getConfig();
+    const locale = cfg.language || 'pt-BR';
+    if (window.i18n) window.i18n.setLocale(locale);
+    applyTranslations();
+    const langSel = $('cfg-language');
+    if (langSel) langSel.value = locale;
+  } catch (_) {}
+
   await loadStatus();
   await loadDashboard();
   await loadRecentActivity();

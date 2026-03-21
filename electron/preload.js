@@ -33,4 +33,7 @@ contextBridge.exposeInMainWorld('zelador', {
     ipcRenderer.on('zelador:status-change', handler);
     return () => ipcRenderer.removeListener('zelador:status-change', handler);
   },
+
+  // ─── Fossilizadas ─────────────────────────────────────────────────────────
+  getFossilized: () => ipcRenderer.invoke('fossilized:list'),
 });

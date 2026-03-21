@@ -432,8 +432,16 @@ body { display: flex; flex-direction: column; height: 100vh; }
   border-radius: var(--radius-md);
   padding: 12px 16px;
 }
-.fossil-name { font-size: 13px; color: var(--text-secondary); margin-bottom: 3px; }
-.fossil-summary { font-size: 12px; color: var(--text-tertiary); font-style: italic; }
+.fossil-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.fossil-name    { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+.fossil-date    { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.fossil-summary { font-size: 12px; color: var(--text-tertiary); font-style: italic; margin-bottom: 4px; }
+.fossil-path    { font-size: 10px; color: var(--text-disabled); font-family: var(--font-mono); }
 
 /* ══════════ CONFIGURAÇÕES ══════════════════════════════════════════════ */
 .settings-screen { max-width: 640px; }
