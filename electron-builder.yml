@@ -1,0 +1,39 @@
+appId: com.grafofluido.zelador
+productName: Grafo Líquido
+copyright: Copyright © 2026
+
+directories:
+  output: dist/
+
+files:
+  - electron/**
+  - renderer/**
+  - zelador/**
+  - assets/**
+  - package.json
+  - "!**/.env"
+  - "!**/node_modules/.cache"
+
+win:
+  target: nsis
+  icon: assets/icon.svg
+
+mac:
+  target: dmg
+  icon: assets/icon.svg
+  category: public.app-category.productivity
+
+linux:
+  target: AppImage
+  icon: assets/icon.svg
+
+publish:
+  provider: github
+  owner: matheusnmto
+  repo: liquid-graph
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
