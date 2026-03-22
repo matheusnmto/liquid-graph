@@ -136,6 +136,15 @@ const translations = {
     'cfg.syncWarning':   '<strong>Repositório PRIVADO é fortemente recomendado</strong> — o vault contém notas pessoais e o conteúdo será enviado para o GitHub.',
     'cfg.syncNow':       'Sincronizar Agora (Pull & Push)',
 
+    // Graph
+    'graph.analyze':     'ANALISAR CONEXÕES',
+    'graph.analyzing':   'ANALISANDO...',
+    'graph.connectionsFound': 'CONEXÕES DESCOBERTAS',
+    'graph.saveLinks':   'SALVAR LINKS NATIVOS',
+    'graph.saving':      'SALVANDO...',
+    'graph.saved':       'SALVO NO COFRE!',
+    'graph.error':       'ERRO DO OLLAMA',
+
     // Status
     'status.idle':       'Zelador inativo',
     'status.loading':    'Carregando...',
@@ -300,6 +309,15 @@ const translations = {
     'cfg.syncStep4':     'Liquid Graph automatically detects the remote',
     'cfg.syncWarning':   '<strong>A PRIVATE repository is strongly recommended</strong> — the vault contains personal notes and content will be pushed to GitHub.',
     'cfg.syncNow':       'Sync Now (Pull & Push)',
+
+    // Graph
+    'graph.analyze':     'ANALYZE CONNECTIONS',
+    'graph.analyzing':   'ANALYZING...',
+    'graph.connectionsFound': 'CONNECTIONS FOUND',
+    'graph.saveLinks':   'SAVE NATIVE LINKS',
+    'graph.saving':      'SAVING...',
+    'graph.saved':       'SAVED TO VAULT!',
+    'graph.error':       'OLLAMA ERROR',
 
     // Status
     'status.idle':       'Zelador idle',

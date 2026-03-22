@@ -1,1 +1,4 @@
 ---\ntags: [zelador, sistema]\ndecay_immune: true\n---\n\n# Purgatório\n\n> Abrir qualquer nota desta lista reseta o decaimento.\n> Última atualização: 22/03/2026, 14:01\n\n---\n\n## Urgente — menos de 7 dias\n\n| Nota | Pasta | Dissolução | Restam |\n|------|-------|------------|--------|\n| [[nota-purgatorio-teste]] | //ideas | 27/03/2026 | 5 dias |\n\n---\n*Gerado automaticamente pelo Zelador · Não edite manualmente*
+
+> [!ai] Conexão Semântica Descoberta
+> [[README]] (similaridade: 99%)

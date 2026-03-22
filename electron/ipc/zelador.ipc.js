@@ -260,12 +260,16 @@ function register(ipcMain, getStatusFn, runNowFn, store) {
         nameMap[name.toLowerCase()] = rel;
 
         const links = [...content.matchAll(/\[\[([^\]|#^]+)/g)].map(m => m[1].trim().toLowerCase());
-        for (const link of links) edgeList.push({ source: rel, targetName: link });
+        const aiLinks = [...content.matchAll(/> \[!ai\].*?\n> \[\[([^\]|#^]+)/g)].map(m => m[1].trim().toLowerCase());
+        
+        for (const link of links) {
+          edgeList.push({ source: rel, targetName: link, isSemantic: aiLinks.includes(link) });
+        }
       }
 
       const edges = edgeList
         .filter(e => nameMap[e.targetName] && nameMap[e.targetName] !== e.source)
-        .map(e => ({ source: e.source, target: nameMap[e.targetName] }));
+        .map(e => ({ source: e.source, target: nameMap[e.targetName], isSemantic: e.isSemantic }));
 
       console.log(`[graph] ${nodes.length} nós, ${edges.length} arestas`);
       return { nodes, edges };
@@ -327,6 +331,43 @@ function register(ipcMain, getStatusFn, runNowFn, store) {
       return { success: true, connections };
     } catch (e) {
       console.error(e);
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('graph:save-semantics', async (event, connections) => {
+    console.log('[semantic] Iniciando salvamento de', connections.length, 'conexões.');
+    if (!store) { console.log('[semantic] No store'); return { success: false, error: 'No store' }; }
+    const vaultPath = store.get('vaultPath');
+    if (!vaultPath) { console.log('[semantic] No vaultPath'); return { success: false, error: 'Vault não configurado' }; }
+
+    try {
+      const fs = require('fs');
+      let saved = 0;
+      for (const conn of connections) {
+        if (!conn.source || !conn.target) continue;
+        const srcPath = path.join(vaultPath, conn.source);
+        if (fs.existsSync(srcPath)) {
+          let content = fs.readFileSync(srcPath, 'utf8');
+          const rootName = Object.keys(require('path')).includes('basename') ? require('path').basename(conn.target, '.md') : conn.target.split('/').pop().replace('.md', '');
+          const link = `[[${rootName}]]`;
+          
+          if (!content.includes(link)) {
+            console.log(`[semantic] Escrevendo em ${srcPath} o link ${link}`);
+            const tag = `\n\n> [!ai] Conexão Semântica Descoberta\n> ${link} (similaridade: ${(conn.similarity * 100).toFixed(0)}%)\n`;
+            fs.appendFileSync(srcPath, tag, 'utf8');
+            saved++;
+          } else {
+            console.log(`[semantic] Pulo: Nota já continha o link ${link} em ${srcPath}`);
+          }
+        } else {
+          console.log(`[semantic] ARQUIVO NAO ENCONTRADO: ${srcPath}`);
+        }
+      }
+      console.log(`[semantic] Concluído, ${saved} arquivos modificados com sucesso.`);
+      return { success: true };
+    } catch (e) {
+      console.error('[semantic] ERRO CRÍTICO:', e);
       return { success: false, error: e.message };
     }
   });

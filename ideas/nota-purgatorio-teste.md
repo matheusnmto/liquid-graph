@@ -6,3 +6,7 @@ links_removed_at: '2026-03-22'
 ---
 
 Conteúdo de teste para verificar o Purgatório.
+
+
+> [!ai] Conexão Semântica Descoberta
+> [[ideia-app-restaurante]] (similaridade: 83%)

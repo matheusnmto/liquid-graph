@@ -49,4 +49,5 @@ contextBridge.exposeInMainWorld('zelador', {
   gitSync: () => ipcRenderer.invoke('git:sync'),
   checkOllama: () => ipcRenderer.invoke('graph:check-ollama'),
   analyzeSemantics: () => ipcRenderer.invoke('graph:analyze-semantics'),
+  saveSemantics: (conns) => ipcRenderer.invoke('graph:save-semantics', conns)
 });

@@ -183,42 +183,83 @@ async function initGraph() {
   for (const n of nodes) nodeById[n.id] = n;
 
   const edges = data.edges
+    .filter(e => !e.isSemantic)
     .map(e => ({ source: nodeById[e.source], target: nodeById[e.target] }))
     .filter(e => e.source && e.target);
 
-  const semanticEdges = [];
+  const semanticEdges = data.edges
+    .filter(e => e.isSemantic)
+    .map(e => ({ source: nodeById[e.source], target: nodeById[e.target], similarity: 1.0 }))
+    .filter(e => e.source && e.target);
 
   const btnAnalyze = document.getElementById('btn-analyze-semantics');
   if (btnAnalyze) {
     btnAnalyze.addEventListener('click', async () => {
       btnAnalyze.disabled = true;
-      const origText = btnAnalyze.innerText;
-      btnAnalyze.innerText = 'Analisando...';
+      const origHtml = btnAnalyze.innerHTML;
+      const t = window.i18n ? window.i18n.t.bind(window.i18n) : (k) => k;
+      
+      btnAnalyze.innerHTML = `<span style="display:inline-block; width:6px; height:6px; background:#BA7517; border-radius:50%; box-shadow:0 0 8px #BA7517;"></span><span style="margin-left:8px;" data-i18n="graph.analyzing">${t('graph.analyzing') || 'ANALISANDO...'}</span>`;
+      
       try {
         const res = await window.zelador.analyzeSemantics();
         if (res.success && res.connections) {
-          console.log(`[semantic] ${res.connections.length} conexões semânticas descobertas`);
-          semanticEdges.length = 0;
+          
           for (const conn of res.connections) {
             const sn = nodeById[conn.source];
             const tn = nodeById[conn.target];
-            if (sn && tn) {
+            if (sn && tn && !semanticEdges.find(e => e.source === sn && e.target === tn)) {
               semanticEdges.push({ source: sn, target: tn, similarity: conn.similarity });
             }
           }
-          btnAnalyze.innerText = `${semanticEdges.length} Conexões Localizadas`;
-          setTimeout(() => btnAnalyze.innerText = origText, 3000);
+          
+          btnAnalyze.innerHTML = `
+            <span style="display:inline-block; width:6px; height:6px; background:#1D9E75; border-radius:50%; box-shadow:0 0 8px #1D9E75;"></span>
+            <span style="margin-left:4px;">${res.connections.length} ${t('graph.connectionsFound') || 'CONEXÕES DESCOBERTAS'}</span>
+            <div id="btn-save-semantics" style="margin-left:12px; padding:4px 10px; background:rgba(255,255,255,0.1); border-radius:12px; font-weight:bold; cursor:pointer; font-size:10px; border:1px solid rgba(255,255,255,0.2); transition: 0.2s; pointer-events:auto;" title="Salvar links nas notas base">
+              ${t('graph.saveLinks') || 'SALVAR LINKS NATIVOS'}
+            </div>
+          `;
+          
+          const saveBtn = document.getElementById('btn-save-semantics');
+          if (saveBtn) {
+            saveBtn.addEventListener('click', async (evt) => {
+              evt.stopPropagation();
+              saveBtn.innerText = t('graph.saving') || 'SALVANDO...';
+              saveBtn.style.pointerEvents = 'none';
+              const sRes = await window.zelador.saveSemantics(res.connections);
+              if (sRes && sRes.success) {
+                saveBtn.innerText = t('graph.saved') || 'SALVO NO COFRE!';
+                saveBtn.style.background = 'rgba(29, 158, 117, 0.4)';
+                saveBtn.style.color = '#fff';
+                setTimeout(() => {
+                  btnAnalyze.innerHTML = origHtml;
+                  btnAnalyze.disabled = false;
+                  if (typeof initGraph === 'function') initGraph();
+                }, 2500);
+              } else {
+                saveBtn.innerText = 'ERRO';
+                saveBtn.style.background = 'var(--color-dissolucao)';
+                saveBtn.style.pointerEvents = 'auto';
+              }
+            });
+          }
+          
+          setTimeout(() => { 
+            if (btnAnalyze.contains(document.getElementById('btn-save-semantics'))) {
+              btnAnalyze.innerHTML = origHtml; 
+              btnAnalyze.disabled = false;
+            }
+          }, 15000);
+          
         } else {
-          btnAnalyze.innerText = 'Erro do Ollama';
-          console.error(res.error);
-          setTimeout(() => btnAnalyze.innerText = origText, 3000);
+          btnAnalyze.innerHTML = `<span>${t('graph.error') || 'ERRO DO OLLAMA'}</span>`;
+          setTimeout(() => { btnAnalyze.innerHTML = origHtml; btnAnalyze.disabled = false; }, 3000);
         }
       } catch (err) {
-        btnAnalyze.innerText = 'Falha crítica';
-        console.error(err);
-        setTimeout(() => btnAnalyze.innerText = origText, 3000);
+        btnAnalyze.innerHTML = `<span>FALHA CRÍTICA</span>`;
+        setTimeout(() => { btnAnalyze.innerHTML = origHtml; btnAnalyze.disabled = false; }, 3000);
       }
-      btnAnalyze.disabled = false;
     });
   }
 
