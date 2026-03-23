@@ -1,13 +1,11 @@
 ---
-tags:
-  - projeto
-  - teste
-decay_level: 2
-decay_since: 2025-12-23T00:00:00.000Z
-links_removed_at: '2026-03-21'
+decay_level: 3
+status: fossilized
+fossilized_at: 2026-03-23
+original_path: _fossilized/2026-03/nota-alvo-f2.md
+decay_immune: true
 ---
 
-# Nota Alvo F2
-
-Esta nota será processada pela Fase 2 (Desconexão).
-[[zelador/node_modules/wrap-ansi-cjs/readme|readme]]
+> [!fossil] Nota dissolvida em 23/03/2026
+>**Resumo:** A presente nota destina-se ao processamento da Fase 2 (Desconexão).
+> [Recuperar nota original](_fossilized/2026-03/nota-alvo-f2.md)
