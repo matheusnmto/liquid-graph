@@ -7,12 +7,12 @@ Atropos is a local desktop daemon that applies programmed entropy to Markdown fi
 The system runs silently in the background, executing once per day during off-hours. No cloud sync. No subscriptions. No data ever leaves your machine except for the AI compression call you explicitly configure.
 
 <p align="center">
-  <img src="assets/screenshots/dashboard.png" width="49%" />
-  <img src="assets/screenshots/graph.png" width="49%" />
+  <img src="packages/app/assets/screenshots/dashboard.png" width="49%" />
+  <img src="packages/app/assets/screenshots/graph.png" width="49%" />
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/purgatory.png" width="49%" />
+  <img src="packages/app/assets/screenshots/purgatory.png" width="49%" />
 </p>
 
 ---
